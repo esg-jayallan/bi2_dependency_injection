@@ -1,5 +1,5 @@
 # bi2_injection
-The Dependency Injection system we use in Bubble Island 2 (Unity3D / C#)
+The Dependency Injection system we use in Bubble Island 2 (for Unity3D, but should work in pure C#)
 
 ## History
 
@@ -32,7 +32,7 @@ Thus the enforcement of all injected fields as `protected`.
 Once it's in the injector, you cannot remove an object from its bindings. See "Contexts" in the "Usage" section for the recommended best practice.
 
 ### Lean
-This is not an MVCs framework. We don't create instances for you on the spot. We don't have magic features. All the system does is set fields in the objects its given based on what has been bound before.
+This is not an IoC (inversion-of-control) framework. This is not an MVCS (model-view-controller-service) framework. We don't have magic features. We don't create instances for you on the spot. All the system does is set fields in the objects its given based on what has been bound before.
 
 ## Usage
 
@@ -113,7 +113,7 @@ childInjector.GetInstance<InjectableA>() // returns anotherA
 
 ### Contexts
 
-StrangeIoC introduces the concept of Contexts to isolate bindings between different application modules. In particular, we found the "CrossContext" concept inadequate for what we wanted to do. Let's consider a game made up of a 'core' gameplay and a 'menu' module. Both of these share some components (services, especially).
+Many Inversion-of-Control frameworks (like StrangeIoC) use the concept of Contexts to isolate bindings between different application modules. In particular, we found the "CrossContext" concept inadequate for what we wanted to do. Let's consider a game made up of a 'core' gameplay and a 'menu' module. Both of these share some components (services, especially).
 
 For each of these modules (contexts), we create an injector whose parent is that of the parent context:
 
