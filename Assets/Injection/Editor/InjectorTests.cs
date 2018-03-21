@@ -50,6 +50,8 @@ namespace Injection.Editor
 			[Inject]
 			protected ITestInterface _otherTestClass;
 
+			public bool PostConstructExecuted { get; private set; }
+
 			public TestClass GetTestClass()
 			{
 				return _testClass;
@@ -58,6 +60,12 @@ namespace Injection.Editor
 			public ITestInterface GetOtherTestClass()
 			{
 				return _otherTestClass;
+			}
+
+			[PostConstruct]
+			private void PostConstruct()
+			{
+				PostConstructExecuted = true;
 			}
 		}
 
@@ -219,7 +227,23 @@ namespace Injection.Editor
 
 			Assert.AreEqual( testClass, injectingClass.GetTestClass(), "instance should be injected" );
 			Assert.AreEqual( otherTestClass, injectingClass.GetOtherTestClass(), "instance should be injected" );
+		}
 
+		[Test]
+		public void TestPostConstruct()
+		{
+			var injector = new Injector();
+			var testClass = new TestClass();
+			var otherTestClass = new TestClassFromInterface();
+
+			injector.Bind<TestClass>( testClass );
+			injector.Bind<ITestInterface>(otherTestClass);
+
+			var injectingClass = new TestInjectingClass();
+			injector.Bind<TestInjectingClass>( injectingClass );
+			injector.PostBindings();
+
+			Assert.IsTrue( injectingClass.PostConstructExecuted, "PostConstruct method should be executed" );
 		}
 
 		#endregion

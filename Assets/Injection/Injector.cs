@@ -21,13 +21,12 @@
 // SOFTWARE.
 // 
 
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using JetBrains.Annotations;
-using UnityEngine.Assertions;
 
 // ReSharper disable RedundantTypeArgumentsOfMethod
-
 namespace Injection
 {
 	public interface IInjectable
@@ -37,6 +36,12 @@ namespace Injection
 	[System.AttributeUsage( System.AttributeTargets.Field )]
 	[MeansImplicitUse]
 	public sealed class Inject : System.Attribute
+	{
+	}
+
+	[System.AttributeUsage( System.AttributeTargets.Method )]
+	[MeansImplicitUse]
+	public sealed class PostConstruct : System.Attribute
 	{
 	}
 
@@ -80,7 +85,8 @@ namespace Injection
 		{
 			//Debug.Log( "INJECTOR injecting " + obj.GetType().Name );
 
-			var fields = Reflector.Reflect( obj.GetType() );
+			MethodInfo postConstruct;
+			var fields = Reflector.Reflect( obj.GetType(), out postConstruct );
 			var fieldsLength = fields.Length;
 			for (var i = 0; i < fieldsLength; i++)
 			{
@@ -89,6 +95,11 @@ namespace Injection
 				field.SetValue( obj, value );
 
 				//Debug.Log( "setting " + field.Name + " to " + value.ToString() );
+			}
+
+			if (postConstruct != null)
+			{
+				postConstruct.Invoke( obj, null );
 			}
 		}
 
@@ -118,15 +129,17 @@ namespace Injection
 		{
 			private static readonly System.Type _injectAttributeType = typeof(Inject);
 			private static readonly Dictionary<System.Type, FieldInfo[]> cachedFieldInfos = new Dictionary<System.Type, FieldInfo[]>();
+			private static readonly Dictionary<System.Type, MethodInfo> cachedMethodInfos = new Dictionary<Type, MethodInfo>();
 			private static readonly List<FieldInfo> _reusableList = new List<FieldInfo>( 1024 );
 
-			public static FieldInfo[] Reflect( System.Type type )
+			public static FieldInfo[] Reflect( System.Type type, out MethodInfo postConstructMethod )
 			{
-				Assert.AreEqual( 0, _reusableList.Count, "Reusable list in Reflector was not empty!" );
+				//Assert.AreEqual( 0, _reusableList.Count, "Reusable list in Reflector was not empty!" );
 
 				FieldInfo[] cachedResult;
 				if (cachedFieldInfos.TryGetValue( type, out cachedResult ))
 				{
+					cachedMethodInfos.TryGetValue(type, out postConstructMethod);
 					return cachedResult;
 				}
 
@@ -143,6 +156,22 @@ namespace Injection
 				var resultAsArray = _reusableList.ToArray();
 				_reusableList.Clear();
 				cachedFieldInfos[ type ] = resultAsArray;
+
+				MethodInfo postConstruct = null;
+				var methods = type.GetMethods( BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy );
+				for (var i = methods.Length - 1; i >= 0; i--)
+				{
+					var method = methods[i];
+					var postConstructs = method.GetCustomAttributes(typeof(PostConstruct), true);
+					if (postConstructs.Length > 1)
+					{
+						cachedMethodInfos[type] = method;
+						postConstruct = method;
+						break;
+					}
+				}
+
+				postConstructMethod = postConstruct;
 				return resultAsArray;
 			}
 		}
